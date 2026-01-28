@@ -2,6 +2,7 @@
 #define AUTH_H
 #include <string>
 
+// Định nghĩa vai trò: Admin=0, Giảng viên=1, Sinh viên=2
 enum Role { ADMIN = 0, LECTURER = 1, STUDENT = 2, NONE = -1 };
 
 struct Session {

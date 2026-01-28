@@ -1,7 +1,7 @@
 #ifndef BACKEND_H
 #define BACKEND_H
 
-#include "database.h"
+
 #include "auth.h"
 
 class Backend {
