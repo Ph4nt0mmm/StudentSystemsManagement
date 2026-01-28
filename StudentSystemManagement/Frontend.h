@@ -1,83 +1,81 @@
 #ifndef FRONTEND_H
 #define FRONTEND_H
-
 #include <windows.h>
 #include <gdiplus.h>
-#include <string>
 #include "auth.h"
-#include "helpers.h"
+#include "database.h"
 
 using namespace Gdiplus;
 
-inline void DrawModernPortal(Graphics& g, RECT r, bool isReg) {
-    SolidBrush bg(Color(255, 240, 245, 245));
+inline void FillRoundRect(Graphics& g, Brush* b, int x, int y, int w, int h, int r) {
+    GraphicsPath path;
+    path.AddArc(x, y, r, r, 180, 90);
+    path.AddArc(x + w - r, y, r, r, 270, 90);
+    path.AddArc(x + w - r, y + h - r, r, r, 0, 90);
+    path.AddArc(x, y + h - r, r, r, 90, 90);
+    g.FillPath(b, &path);
+}
+
+inline void DrawModernPortal(Graphics& g, RECT r, bool isRegister) {
+    g.SetSmoothingMode(SmoothingModeAntiAlias);
+    LinearGradientBrush bg(Rect(0, 0, r.right, r.bottom), Color(255, 0, 121, 124), Color(255, 0, 70, 72), LinearGradientModeVertical);
     g.FillRectangle(&bg, 0, 0, r.right, r.bottom);
-
-    SolidBrush card(Color(255, 255, 255, 255));
-    Helpers::FillRoundRect(g, &card, 700, 80, 420, 600, 30);
-
-    // Dòng này sẽ hết lỗi sau khi bạn sửa helpers.h ở trên
-    Pen shadowPen(Color(20, 0, 0, 0), 2.0f);
-    Helpers::DrawRoundRect(g, &shadowPen, 700, 80, 420, 600, 30);
-
+    SolidBrush card(Color(255, 255, 255));
+    FillRoundRect(g, &card, 730, 100, 360, 580, 25);
     FontFamily ff(L"Segoe UI");
-    Font fTitle(&ff, 24, FontStyleBold, UnitPoint);
-    SolidBrush bText(Color(255, 45, 52, 54));
-    g.DrawString(isReg ? L"ĐĂNG KÝ" : L"ĐĂNG NHẬP", -1, &fTitle, PointF(770.0f, 140.0f), &bText);
-    
-    Font fHint(&ff, 10, FontStyleRegular, UnitPoint);
-    SolidBrush bHint(Color(255, 99, 110, 114));
-    g.DrawString(L"Vai trò: 0-Admin | 1-GV | 2-SV", -1, &fHint, PointF(775.0f, 365.0f), &bHint);
-
-    SolidBrush decor(Color(255, 0, 60, 60));
-    g.FillEllipse(&decor, 200, 250, 200, 200);
+    Font fT(&ff, 18, FontStyleBold, UnitPoint);
+    Font fS(&ff, 9, FontStyleRegular, UnitPoint);
+    SolidBrush mBr(Color(255, 0, 80, 82));
+    SolidBrush gBr(Color(255, 120, 120, 120));
+    g.DrawString(isRegister ? L"ĐĂNG KÝ" : L"ĐĂNG NHẬP", -1, &fT, PointF(765, 150), &mBr);
+    g.DrawString(L"Tên đăng nhập:", -1, &fS, PointF(770, 210), &gBr);
+    g.DrawString(L"Mật khẩu:", -1, &fS, PointF(770, 280), &gBr);
+    g.DrawString(L"Vai trò (1:GV, 2:SV):", -1, &fS, PointF(770, 365), &mBr);
 }
 
-inline void DrawDashboardFrame(Graphics& g, RECT r, Session& s) {
-    SolidBrush sideBg(Color(255, 0, 60, 60));
-    g.FillRectangle(&sideBg, 0, 0, 250, r.bottom);
-
+inline void DrawDashboard(Graphics& g, RECT r, Session session) {
+    g.SetSmoothingMode(SmoothingModeAntiAlias);
+    g.Clear(Color(255, 240, 242, 245));
+    SolidBrush sideBr(Color(255, 0, 80, 82));
+    g.FillRectangle(&sideBr, 0, 0, 250, r.bottom);
     FontFamily ff(L"Segoe UI");
-    Font fMenu(&ff, 11, FontStyleBold, UnitPoint);
-    Font fHeader(&ff, 16, FontStyleBold, UnitPoint);
-    SolidBrush white(Color(255, 255, 255, 255));
-    SolidBrush darkText(Color(255, 33, 37, 41));
-
-    const wchar_t* roleName = (s.role == 0) ? L"QUẢN TRỊ VIÊN" : (s.role == 1 ? L"GIẢNG VIÊN" : L"SINH VIÊN");
-    g.DrawString(roleName, -1, &fMenu, PointF(30.0f, 45.0f), &white);
+    Font fT(&ff, 13, FontStyleBold, UnitPoint);
+    Font fWelcome(&ff, 16, FontStyleBold, UnitPoint);
+    Font fM(&ff, 10, FontStyleRegular, UnitPoint);
     
-    Pen lineWhite(Color(100, 255, 255, 255), 1.0f);
-    g.DrawLine(&lineWhite, 30.0f, 75.0f, 220.0f, 75.0f);
+    SolidBrush w(Color(255, 255, 255)), b(Color(255, 33, 37, 41));
+    SolidBrush red(Color(255, 220, 53, 69)), green(Color(255, 40, 167, 69));
 
-    const wchar_t* menuLabels[] = { L"🏠   TRANG CHỦ", L"📚   KHÓA HỌC", L"📅   LỊCH HỌC", L"✅   ĐIỂM DANH", L"📊   BẢNG ĐIỂM" };
+    // Nút Đăng xuất
+    FillRoundRect(g, &red, 30, r.bottom - 80, 190, 45, 10);
+    g.DrawString(L"↪ ĐĂNG XUẤT", -1, &fM, PointF(65, r.bottom - 68), &w);
 
-    for (int i = 0; i < 5; i++) {
-        REAL yPos = 120.0f + (REAL)(i * 60); 
-        if ((int)s.currentView == i) {
-            SolidBrush active(Color(80, 255, 255, 255));
-            g.FillRectangle(&active, 0.0f, yPos, 250.0f, 50.0f); 
-            SolidBrush indicator(Color(255, 255, 255, 255));
-            g.FillRectangle(&indicator, 0.0f, yPos, 5.0f, 50.0f);
+    // Sidebar Role
+    std::wstring rSide = (session.role == ADMIN) ? L"QUẢN TRỊ VIÊN" : (session.role == LECTURER ? L"GIẢNG VIÊN" : L"SINH VIÊN");
+    g.DrawString(rSide.c_str(), -1, &fT, PointF(30, 80), &w);
+
+    // Lời chào động
+    std::wstring msg = (session.role == ADMIN) ? L"Chào mừng Quản trị viên: " : (session.role == LECTURER ? L"Chào mừng Giảng viên: " : L"Chào mừng Sinh viên: ");
+    msg += session.username;
+    g.DrawString(msg.c_str(), -1, &fWelcome, PointF(280, 40), &b);
+
+    if (session.role == ADMIN) {
+        g.DrawString(L"QUẢN LÝ TÀI KHOẢN HỆ THỐNG", -1, &fT, PointF(280, 90), &b);
+        int y = 140;
+        for (const auto& u : g_users) {
+            if (u.username == L"admin") continue;
+            std::wstring info = u.username + (u.role == LECTURER ? L" (GV) " : L" (SV) ") + (u.isApproved ? L"[Đã duyệt]" : L"[Chờ]");
+            g.DrawString(info.c_str(), -1, &fM, PointF(280, y), &b);
+            if (!u.isApproved) {
+                g.FillRectangle(&green, 650, y - 5, 70, 25);
+                g.DrawString(L"Duyệt", -1, &fM, PointF(662, y - 2), &w);
+            }
+            g.FillRectangle(&red, 730, y - 5, 70, 25);
+            g.DrawString(L"Xóa", -1, &fM, PointF(750, y - 2), &w);
+            y += 40;
         }
-        g.DrawString(menuLabels[i], -1, &fMenu, PointF(40.0f, yPos + 15.0f), &white);
+    } else {
+        g.DrawString(L"Bạn đã đăng nhập thành công vào trang cá nhân.", -1, &fM, PointF(280, 100), &b);
     }
-
-    SolidBrush brRed(Color(255, 220, 53, 69)); 
-    Helpers::FillRoundRect(g, &brRed, 20, 650, 210, 45, 10); 
-    g.DrawString(L"↔   ĐĂNG XUẤT", -1, &fMenu, PointF(60.0f, 662.0f), &white);
-
-    SolidBrush headBg(Color(255, 255, 255, 255));
-    g.FillRectangle(&headBg, 250, 0, r.right - 250, 80);
-    
-    Pen separator(Color(40, 0, 0, 0), 1.0f);
-    g.DrawLine(&separator, 250.0f, 80.0f, (REAL)r.right, 80.0f);
-
-    const wchar_t* pageTitles[] = { L"Trang chủ hệ thống", L"Quản lý Khóa học", L"Lịch học & Giảng dạy", L"Hệ thống Điểm danh", L"Kết quả học tập" };
-    g.DrawString(pageTitles[(int)s.currentView], -1, &fHeader, PointF(280.0f, 25.0f), &darkText);
-    
-    Font fUser(&ff, 10, FontStyleRegular, UnitPoint);
-    std::wstring welcome = L"Xin chào, " + s.username;
-    g.DrawString(welcome.c_str(), -1, &fUser, PointF((REAL)r.right - 220.0f, 30.0f), &darkText);
 }
-
 #endif

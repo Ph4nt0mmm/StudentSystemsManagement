@@ -1,3 +1,2 @@
 admin 123 0 1
-student01 123456 2 1
-le 123 1 1
+kiet 123 2 1
